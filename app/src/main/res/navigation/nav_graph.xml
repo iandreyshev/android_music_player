@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/trackListFragment">
+
+    <fragment
+        android:id="@+id/trackListFragment"
+        android:name="ru.iandreyshev.musicplayer.ui.TrackListFragment"
+        android:label="TrackListFragment">
+
+        <action
+            android:id="@+id/openTrack"
+            app:destination="@id/trackFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/trackFragment"
+        android:name="ru.iandreyshev.musicplayer.ui.TrackFragment"
+        android:label="TrackFragment">
+        <argument
+            android:name="track"
+            app:argType="ru.iandreyshev.musicplayer.domain.Track" />
+    </fragment>
+
+</navigation>
