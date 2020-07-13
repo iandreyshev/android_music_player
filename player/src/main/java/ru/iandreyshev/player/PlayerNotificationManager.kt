@@ -1,6 +1,5 @@
 package ru.iandreyshev.player
 
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Bitmap
@@ -54,8 +53,9 @@ class PlayerNotificationManager(
         mExoPlayerNotificationManager.setPlayer(player)
     }
 
-    private inner class DescriptionAdapter(private val controller: MediaControllerCompat) :
-        PlayerNotificationManager.MediaDescriptionAdapter {
+    private inner class DescriptionAdapter(
+        private val controller: MediaControllerCompat
+    ) : PlayerNotificationManager.MediaDescriptionAdapter {
 
         var currentIconUri: Uri? = null
         var currentBitmap: Bitmap? = null

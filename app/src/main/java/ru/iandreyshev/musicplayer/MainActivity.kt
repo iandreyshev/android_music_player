@@ -2,8 +2,6 @@ package ru.iandreyshev.musicplayer
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import kotlinx.android.synthetic.main.activity_main.*
-import ru.iandreyshev.musicplayer.R
 
 class MainActivity : AppCompatActivity() {
 

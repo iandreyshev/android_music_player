@@ -2,13 +2,15 @@ package ru.iandreyshev.musicplayer.presentation
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import ru.iandreyshev.musicplayer.domain.IMusicPlayer
 import ru.iandreyshev.musicplayer.domain.Track
 import ru.iandreyshev.musicplayer.domain.TrackId
 import ru.iandreyshev.musicplayer.navigation.IRouter
 import ru.iandreyshev.musicplayer.utils.uiLazy
 
 class TrackListViewModel(
-    private val router: IRouter
+    private val router: IRouter,
+    private val player: IMusicPlayer
 ) : ViewModel() {
 
     val tracks by uiLazy {
@@ -24,7 +26,9 @@ class TrackListViewModel(
     fun onTrackClickAt(position: Int) {
         tracks.value
             ?.getOrNull(position)
-            ?.let(router::openTrack)
+            ?.let {
+                player.play(it)
+            }
     }
 
 }

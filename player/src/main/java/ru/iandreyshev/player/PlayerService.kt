@@ -2,25 +2,28 @@ package ru.iandreyshev.player
 
 import android.app.Notification
 import android.app.PendingIntent
+import android.app.Service
 import android.content.Intent
-import android.os.Bundle
 import android.os.IBinder
-import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.media.MediaBrowserServiceCompat
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import com.google.android.exoplayer2.util.Util
+import com.google.android.exoplayer2.extractor.ogg.OggExtractor
+import com.google.android.exoplayer2.source.LoopingMediaSource
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DataSpec
+import com.google.android.exoplayer2.upstream.RawResourceDataSource
 import timber.log.Timber
 
+
 // TODO: 12-Jul-20 Почему не используется обычный Service?
-class PlayerService : MediaBrowserServiceCompat() {
+class PlayerService : Service() {
 
     private lateinit var mNotificationManager: PlayerNotificationManager
     private lateinit var mMediaSession: MediaSessionCompat
@@ -42,9 +45,7 @@ class PlayerService : MediaBrowserServiceCompat() {
         }
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return super.onBind(intent)
-    }
+    override fun onBind(intent: Intent?): IBinder? = Binder(this)
 
     override fun onCreate() {
         super.onCreate()
@@ -60,8 +61,6 @@ class PlayerService : MediaBrowserServiceCompat() {
             isActive = true
         }
 
-        sessionToken = mMediaSession.sessionToken
-
         mNotificationManager = PlayerNotificationManager(
             this,
             mExoPlayer,
@@ -69,39 +68,44 @@ class PlayerService : MediaBrowserServiceCompat() {
             PlayerNotificationListener()
         )
 
-        // mMediaSource =
+//        mMediaSource = object : IMediaSource {
+//            override fun get(): MediaMetadataCompat? {
+//                return null
+//            }
+//        }
 
-        mMediaSessionConnector = MediaSessionConnector(mMediaSession).also { connector ->
-            val dataSourceFactory = DefaultDataSourceFactory(
-                this, Util.getUserAgent(this, MUSIC_PLAYER_USER_AGENT), null
-            )
-
-            // Create the PlaybackPreparer of the media session connector.
-            val playbackPreparer = PlayerPlaybackPreparer(
-                mMediaSource,
-                mExoPlayer,
-                dataSourceFactory
-            )
-
-            connector.setPlayer(mExoPlayer)
-            connector.setPlaybackPreparer(playbackPreparer)
-            connector.setQueueNavigator(QueueNavigator(mMediaSession))
-        }
+//        mMediaSessionConnector = MediaSessionConnector(mMediaSession).also { connector ->
+//            val dataSourceFactory = DefaultDataSourceFactory(
+//                this, Util.getUserAgent(this, MUSIC_PLAYER_USER_AGENT), null
+//            )
+//
+//            // Create the PlaybackPreparer of the media session connector.
+//            val playbackPreparer = PlayerPlaybackPreparer(
+//                mMediaSource,
+//                mExoPlayer,
+//                dataSourceFactory
+//            )
+//
+//            connector.setPlayer(mExoPlayer)
+//            connector.setPlaybackPreparer(playbackPreparer)
+//            connector.setQueueNavigator(QueueNavigator(mMediaSession))
+//        }
     }
 
-    override fun onLoadChildren(
-        parentId: String,
-        result: Result<MutableList<MediaBrowserCompat.MediaItem>>
-    ) {
-        TODO("onLoadChildren not implemented")
-    }
+    fun play(rawId: Int) {
+        val dataSpec = DataSpec(RawResourceDataSource.buildRawResourceUri(rawId))
+        val dataSource = RawResourceDataSource(this)
+        dataSource.open(dataSpec)
 
-    override fun onGetRoot(
-        clientPackageName: String,
-        clientUid: Int,
-        rootHints: Bundle?
-    ): BrowserRoot? {
-        TODO("onGetRoot not implemented")
+        val factory = DataSource.Factory { dataSource }
+
+        val audioSource = ProgressiveMediaSource
+            .Factory(factory, OggExtractor.FACTORY)
+            .createMediaSource(dataSource.uri)
+        val loopingMediaSource = LoopingMediaSource(audioSource)
+
+        mExoPlayer.prepare(loopingMediaSource)
+        mExoPlayer.playWhenReady = true
     }
 
     private inner class PlayerNotificationListener :
@@ -186,6 +190,10 @@ class PlayerService : MediaBrowserServiceCompat() {
             ).show()
         }
     }
+
+    class Binder(
+        val service: PlayerService
+    ) : android.os.Binder()
 
     companion object {
         private const val MUSIC_PLAYER_USER_AGENT = "iandreyshev.music.player"
