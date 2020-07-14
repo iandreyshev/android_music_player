@@ -24,8 +24,8 @@ class TrackFragment : BaseFragment(R.layout.fragment_track) {
         toolbar.setNavigationOnClickListener { mViewModel.onBack() }
 
         mViewModel.track.viewObserveWith { track ->
-            name.text = track.name
-            author.text = track.author
+            name.text = track.title
+            author.text = track.artist
         }
     }
 

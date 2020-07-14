@@ -8,10 +8,10 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.item_track.view.*
 import ru.iandreyshev.musicplayer.R
-import ru.iandreyshev.musicplayer.domain.Track
 import ru.iandreyshev.musicplayer.utils.adapterPositionSafely
+import ru.iandreyshev.player.PlayerTrack
 
-class TrackListAdapter : ListAdapter<Track, TrackViewHolder>(DiffCallback) {
+class TrackListAdapter : ListAdapter<PlayerTrack, TrackViewHolder>(DiffCallback) {
 
     private var mListener: (position: Int) -> Unit = {}
 
@@ -28,8 +28,9 @@ class TrackListAdapter : ListAdapter<Track, TrackViewHolder>(DiffCallback) {
 
     override fun onBindViewHolder(holder: TrackViewHolder, position: Int) {
         getItem(position)?.let { track ->
-            holder.itemView.name.text = track.name
-            holder.itemView.author.text = track.author
+            holder.itemView.name.text = track.title
+            holder.itemView.author.text = track.artist
+            holder.itemView.thumbnail.setImageResource(track.iconRes)
         }
     }
 
@@ -41,7 +42,7 @@ class TrackListAdapter : ListAdapter<Track, TrackViewHolder>(DiffCallback) {
 
 class TrackViewHolder(v: View) : RecyclerView.ViewHolder(v)
 
-object DiffCallback : DiffUtil.ItemCallback<Track>() {
-    override fun areItemsTheSame(oldItem: Track, newItem: Track): Boolean = false
-    override fun areContentsTheSame(oldItem: Track, newItem: Track): Boolean = false
+object DiffCallback : DiffUtil.ItemCallback<PlayerTrack>() {
+    override fun areItemsTheSame(oldItem: PlayerTrack, newItem: PlayerTrack): Boolean = false
+    override fun areContentsTheSame(oldItem: PlayerTrack, newItem: PlayerTrack): Boolean = false
 }

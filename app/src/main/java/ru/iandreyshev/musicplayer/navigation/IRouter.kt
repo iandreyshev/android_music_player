@@ -1,8 +1,8 @@
 package ru.iandreyshev.musicplayer.navigation
 
-import ru.iandreyshev.musicplayer.domain.Track
+import ru.iandreyshev.player.PlayerTrack
 
 interface IRouter {
-    fun openTrack(track: Track)
+    fun openTrack(track: PlayerTrack)
     fun onBackFromTrack()
 }

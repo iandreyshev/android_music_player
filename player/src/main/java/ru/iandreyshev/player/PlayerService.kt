@@ -5,30 +5,32 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import android.support.v4.media.MediaDescriptionCompat
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
-import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
-import com.google.android.exoplayer2.extractor.ogg.OggExtractor
-import com.google.android.exoplayer2.source.LoopingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.DataSpec
 import com.google.android.exoplayer2.upstream.RawResourceDataSource
+import ru.iandreyshev.player.extensions.artist
+import ru.iandreyshev.player.extensions.duration
+import ru.iandreyshev.player.extensions.fullDescription
+import ru.iandreyshev.player.extensions.title
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 
-
-// TODO: 12-Jul-20 Почему не используется обычный Service?
 class PlayerService : Service() {
 
+    lateinit var mediaSession: MediaSessionCompat
+        private set
+
     private lateinit var mNotificationManager: PlayerNotificationManager
-    private lateinit var mMediaSession: MediaSessionCompat
     private lateinit var mMediaSessionConnector: MediaSessionConnector
-    private lateinit var mMediaSource: IMediaSource
 
     private val mPlayerListener = PlayerEventListener()
     private val mAudioAttributes = AudioAttributes.Builder()
@@ -56,56 +58,61 @@ class PlayerService : Service() {
             }
 
         // TODO: 12-Jul-20 Для чего используется тег?
-        mMediaSession = MediaSessionCompat(this, "PlayerService").apply {
+        mediaSession = MediaSessionCompat(this, "PlayerService").apply {
             setSessionActivity(sessionActivityPendingIntent)
             isActive = true
         }
 
+        val mediaController = MediaControllerCompat(this, mediaSession)
+
         mNotificationManager = PlayerNotificationManager(
             this,
             mExoPlayer,
-            mMediaSession.sessionToken,
+            mediaController,
             PlayerNotificationListener()
         )
 
-//        mMediaSource = object : IMediaSource {
-//            override fun get(): MediaMetadataCompat? {
-//                return null
-//            }
-//        }
-
-//        mMediaSessionConnector = MediaSessionConnector(mMediaSession).also { connector ->
-//            val dataSourceFactory = DefaultDataSourceFactory(
-//                this, Util.getUserAgent(this, MUSIC_PLAYER_USER_AGENT), null
-//            )
-//
-//            // Create the PlaybackPreparer of the media session connector.
-//            val playbackPreparer = PlayerPlaybackPreparer(
-//                mMediaSource,
-//                mExoPlayer,
-//                dataSourceFactory
-//            )
-//
-//            connector.setPlayer(mExoPlayer)
-//            connector.setPlaybackPreparer(playbackPreparer)
-//            connector.setQueueNavigator(QueueNavigator(mMediaSession))
-//        }
+        // FIXME: 15-Jul-20 Че это ваще такое?
+        mMediaSessionConnector = MediaSessionConnector(mediaSession).also { connector ->
+            connector.setPlayer(mExoPlayer)
+        }
     }
 
-    fun play(rawId: Int) {
-        val dataSpec = DataSpec(RawResourceDataSource.buildRawResourceUri(rawId))
-        val dataSource = RawResourceDataSource(this)
-        dataSource.open(dataSpec)
+    override fun onDestroy() {
+        mediaSession.isActive = false
+        mediaSession.release()
 
-        val factory = DataSource.Factory { dataSource }
+        mExoPlayer.removeListener(mPlayerListener)
+        mExoPlayer.release()
+    }
 
-        val audioSource = ProgressiveMediaSource
-            .Factory(factory, OggExtractor.FACTORY)
-            .createMediaSource(dataSource.uri)
-        val loopingMediaSource = LoopingMediaSource(audioSource)
+    fun play(track: PlayerTrack) {
+        val mediaMetadata = MediaMetadataCompat.Builder()
+            .apply {
+                title = track.title
+                artist = track.artist
+                duration = TimeUnit.SECONDS.toMillis(track.duration)
+            }
+            .build()
+        val rawDataSource = RawResourceDataSource(this)
+        rawDataSource.open(DataSpec(RawResourceDataSource.buildRawResourceUri(track.trackRes)))
 
-        mExoPlayer.prepare(loopingMediaSource)
+        val mediaSource = ProgressiveMediaSource.Factory(DataSource.Factory { rawDataSource })
+            .setTag(mediaMetadata.fullDescription)
+            .createMediaSource(rawDataSource.uri)
+
+        mNotificationManager.trackAppearance = track
+
+        mExoPlayer.prepare(mediaSource)
         mExoPlayer.playWhenReady = true
+    }
+
+    fun playWhenReady() {
+        mExoPlayer.playWhenReady = !mExoPlayer.playWhenReady
+    }
+
+    fun stop() {
+        mExoPlayer.stop()
     }
 
     private inner class PlayerNotificationListener :
@@ -191,21 +198,13 @@ class PlayerService : Service() {
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        mExoPlayer.stop()
+    }
+
     class Binder(
         val service: PlayerService
     ) : android.os.Binder()
 
-    companion object {
-        private const val MUSIC_PLAYER_USER_AGENT = "iandreyshev.music.player"
-    }
-
-}
-
-private class QueueNavigator(
-    mediaSession: MediaSessionCompat
-) : TimelineQueueNavigator(mediaSession) {
-    private val window = Timeline.Window()
-    override fun getMediaDescription(player: Player, windowIndex: Int): MediaDescriptionCompat =
-        player.currentTimeline
-            .getWindow(windowIndex, window).tag as MediaDescriptionCompat
 }

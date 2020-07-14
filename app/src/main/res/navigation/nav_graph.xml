@@ -21,7 +21,7 @@
         android:label="TrackFragment">
         <argument
             android:name="track"
-            app:argType="ru.iandreyshev.musicplayer.domain.Track" />
+            app:argType="ru.iandreyshev.player.PlayerTrack" />
     </fragment>
 
 </navigation>

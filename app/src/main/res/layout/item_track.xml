@@ -20,10 +20,12 @@
         app:layout_constraintGuide_end="16dp" />
 
     <ImageView
-        android:id="@+id/trackImage"
+        android:id="@+id/thumbnail"
         android:layout_width="64dp"
         android:layout_height="64dp"
         android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="@id/startGuideline"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -31,10 +33,10 @@
         android:id="@+id/playingIndicator"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/trackImage"
-        app:layout_constraintEnd_toEndOf="@id/trackImage"
-        app:layout_constraintStart_toStartOf="@id/trackImage"
-        app:layout_constraintTop_toTopOf="@id/trackImage">
+        app:layout_constraintBottom_toBottomOf="@id/thumbnail"
+        app:layout_constraintEnd_toEndOf="@id/thumbnail"
+        app:layout_constraintStart_toStartOf="@id/thumbnail"
+        app:layout_constraintTop_toTopOf="@id/thumbnail">
 
         <ImageView
             android:layout_width="match_parent"
@@ -50,8 +52,8 @@
         android:textColor="#3C3C3C"
         android:textSize="16sp"
         app:layout_constraintEnd_toStartOf="@id/endGuideline"
-        app:layout_constraintStart_toEndOf="@id/trackImage"
-        app:layout_constraintTop_toTopOf="@id/trackImage"
+        app:layout_constraintStart_toEndOf="@id/thumbnail"
+        app:layout_constraintTop_toTopOf="@id/thumbnail"
         tools:text="Track name" />
 
     <TextView
@@ -62,7 +64,7 @@
         android:textColor="#A6A6A6"
         android:textSize="14sp"
         app:layout_constraintEnd_toStartOf="@id/endGuideline"
-        app:layout_constraintStart_toEndOf="@id/trackImage"
+        app:layout_constraintStart_toEndOf="@id/thumbnail"
         app:layout_constraintTop_toBottomOf="@id/name"
         tools:text="Track name" />
 

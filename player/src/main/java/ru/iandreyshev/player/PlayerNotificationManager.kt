@@ -4,9 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.support.v4.media.session.MediaControllerCompat
-import android.support.v4.media.session.MediaSessionCompat
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
@@ -14,10 +12,13 @@ import kotlinx.coroutines.*
 
 class PlayerNotificationManager(
     private val context: Context,
-    private val player: ExoPlayer,
-    sessionToken: MediaSessionCompat.Token,
+    private val exoPlayer: ExoPlayer,
+    // FIXME: 14-Jul-20 Что такое MediaControllerCompat?
+    private val mediaController: MediaControllerCompat,
     notificationListener: PlayerNotificationManager.NotificationListener
 ) {
+
+    var trackAppearance: PlayerTrack? = null
 
     private val mServiceJob = SupervisorJob()
     private val mServiceScope = CoroutineScope(Dispatchers.Main + mServiceJob)
@@ -26,9 +27,6 @@ class PlayerNotificationManager(
     private val mExoPlayerNotificationManager: PlayerNotificationManager
 
     init {
-        // TODO: 12-Jul-20 Узнать, что такое MediaController
-        val mediaController = MediaControllerCompat(context, sessionToken)
-
         mExoPlayerNotificationManager = PlayerNotificationManager.createWithNotificationChannel(
             context,
             NOW_PLAYING_CHANNEL_ID,
@@ -37,8 +35,9 @@ class PlayerNotificationManager(
             DescriptionAdapter(mediaController),
             notificationListener
         ).apply {
-            setMediaSessionToken(sessionToken)
+            setMediaSessionToken(mediaController.sessionToken)
             setSmallIcon(R.drawable.exo_icon_circular_play)
+            setUseNavigationActions(false)
 
             setRewindIncrementMs(0)
             setFastForwardIncrementMs(0)
@@ -50,38 +49,40 @@ class PlayerNotificationManager(
     }
 
     fun showNotification() {
-        mExoPlayerNotificationManager.setPlayer(player)
+        mExoPlayerNotificationManager.setPlayer(exoPlayer)
     }
 
     private inner class DescriptionAdapter(
         private val controller: MediaControllerCompat
     ) : PlayerNotificationManager.MediaDescriptionAdapter {
 
-        var currentIconUri: Uri? = null
+        var currentIconRes: Int? = null
         var currentBitmap: Bitmap? = null
 
         override fun createCurrentContentIntent(player: Player): PendingIntent? =
             controller.sessionActivity
 
         override fun getCurrentContentText(player: Player) =
-            controller.metadata.description.subtitle.toString()
+            "Content text"
 
         override fun getCurrentContentTitle(player: Player) =
-            controller.metadata.description.title.toString()
+            trackAppearance?.title.orEmpty()
 
         override fun getCurrentLargeIcon(
             player: Player,
             callback: PlayerNotificationManager.BitmapCallback
         ): Bitmap? {
-            val iconUri = controller.metadata.description.iconUri
-            return if (currentIconUri != iconUri || currentBitmap == null) {
+            val iconRes = trackAppearance?.iconRes
+            return if (currentIconRes != iconRes || currentBitmap == null) {
 
                 // Cache the bitmap for the current song so that successive calls to
                 // `getCurrentLargeIcon` don't cause the bitmap to be recreated.
-                currentIconUri = iconUri
+                currentIconRes = iconRes
                 mServiceScope.launch {
-                    currentBitmap = iconUri?.let {
-                        resolveUriAsBitmap(it)
+                    currentBitmap = iconRes?.let { res ->
+                        withContext(Dispatchers.IO) {
+                            BitmapFactory.decodeResource(context.resources, res)
+                        }
                     }
                     currentBitmap?.let { callback.onBitmap(it) }
                 }
@@ -90,22 +91,6 @@ class PlayerNotificationManager(
                 currentBitmap
             }
         }
-
-        private suspend fun resolveUriAsBitmap(uri: Uri): Bitmap? {
-            return withContext(Dispatchers.IO) {
-                val parcelFileDescriptor =
-                    context.contentResolver.openFileDescriptor(uri, MODE_READ_ONLY)
-                        ?: return@withContext null
-                val fileDescriptor = parcelFileDescriptor.fileDescriptor
-                BitmapFactory.decodeFileDescriptor(fileDescriptor).apply {
-                    parcelFileDescriptor.close()
-                }
-            }
-        }
-    }
-
-    companion object {
-        private const val MODE_READ_ONLY = "r"
     }
 
 }

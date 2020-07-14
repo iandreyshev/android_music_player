@@ -5,7 +5,6 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.android.viewmodel.dsl.viewModel
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
-import ru.iandreyshev.musicplayer.domain.IMusicPlayer
 import ru.iandreyshev.musicplayer.presentation.TrackListViewModel
 import ru.iandreyshev.musicplayer.presentation.TrackViewModel
 import timber.log.Timber
@@ -22,11 +21,19 @@ class MusicPlayerApplication : Application() {
             modules(
                 listOf(
                     module {
-                        single<IMusicPlayer> {
+                        single {
                             MusicServiceConnection(applicationContext)
                         }
 
-                        viewModel { TrackListViewModel(it.component1(), get()) }
+                        viewModel {
+                            val serviceConnection = get<MusicServiceConnection>()
+                            TrackListViewModel(
+                                router = it.component1(),
+                                player = serviceConnection,
+                                playbackState = serviceConnection.playbackState,
+                                playbackTrack = serviceConnection.playbackTrack
+                            )
+                        }
                         viewModel { TrackViewModel(it.component1(), it.component2()) }
                     }
                 )
